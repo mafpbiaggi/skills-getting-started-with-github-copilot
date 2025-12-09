@@ -31,9 +31,11 @@ document.addEventListener("DOMContentLoaded", () => {
         // Build participants section: show a bulleted list or a friendly "no participants" message
         let participantsHtml = "";
         if (Array.isArray(details.participants) && details.participants.length > 0) {
-          participantsHtml = `<ul class="participants-list">` +
+          participantsHtml = `<ul class="participants-list no-bullets">` +
             details.participants
-              .map((p) => `<li>${escapeHtml(p)}</li>`)
+              .map((p) =>
+                `<li class="participant-item">${escapeHtml(p)} <span class="delete-participant" title="Remover participante" data-activity="${escapeHtml(name)}" data-email="${escapeHtml(p)}">🗑️</span></li>`
+              )
               .join("") +
             `</ul>`;
         } else {
@@ -58,6 +60,28 @@ document.addEventListener("DOMContentLoaded", () => {
         option.value = name;
         option.textContent = name;
         activitySelect.appendChild(option);
+      // ...existing code...
+
+      // Adiciona o evento de deletar participante
+      document.querySelectorAll('.delete-participant').forEach((icon) => {
+        icon.addEventListener('click', async (e) => {
+          const activity = icon.getAttribute('data-activity');
+          const email = icon.getAttribute('data-email');
+          try {
+            const response = await fetch(`/activities/${encodeURIComponent(activity)}/unregister?email=${encodeURIComponent(email)}`, {
+              method: 'POST',
+            });
+            const result = await response.json();
+            if (response.ok) {
+              fetchActivities();
+            } else {
+              alert(result.detail || 'Erro ao remover participante');
+            }
+          } catch (error) {
+            alert('Erro ao remover participante.');
+          }
+        });
+      });
       });
     } catch (error) {
       activitiesList.innerHTML = "<p>Failed to load activities. Please try again later.</p>";
@@ -86,6 +110,8 @@ document.addEventListener("DOMContentLoaded", () => {
         messageDiv.textContent = result.message;
         messageDiv.className = "success";
         signupForm.reset();
+        // Atualiza a lista de atividades imediatamente
+        fetchActivities();
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
         messageDiv.className = "error";
